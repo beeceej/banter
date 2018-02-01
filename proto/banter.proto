@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package banter;
+
+option go_package = "pb";
+
+
+service banter {
+    rpc Ping (Address) returns (Response);
+}
+
+message Address {
+    string address = 1;
+}
+
+message Response {
+    Status status = 1;
+}
+
+message Peer {
+    string peer_id = 1;
+    string name = 2;
+    string ip_address = 3;
+}
+
+
+enum Status {
+     OK = 0;
+     ERROR = 1;
+}
