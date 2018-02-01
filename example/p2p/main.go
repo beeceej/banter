@@ -68,9 +68,9 @@ func registerClient(addresses []string, session int) {
 		for times := 0; times < 3; times++ {
 			r, err := c.Ping(ctx, &pb.Address{Address: address})
 			if err != nil {
-				log.Printf("Could not ping %v could not send mail: %v", address, err)
+				log.Printf("Could not ping %v", address)
 			} else {
-				log.Printf(fmt.Sprintf("Client localhost%s received message with status %s", address, r.GetStatus().String()))
+				log.Printf(fmt.Sprintf("%s received message with status %s", address, r.GetStatus().String()))
 				break
 			}
 		}
@@ -82,9 +82,8 @@ func main() {
 	peerAddresses := os.Args[1:]
 	session := rand.Intn(1000000)
 	go func() { registerServer(port, session) }()
-	time.Sleep(time.Second * 1)
 	for {
-		time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
+		time.Sleep(time.Duration(rand.Intn(2)) * time.Second)
 		registerClient(peerAddresses, session)
 	}
 }
