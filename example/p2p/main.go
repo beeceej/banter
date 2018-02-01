@@ -23,7 +23,6 @@ type server struct {
 }
 
 func (s *server) Ping(ctx context.Context, in *pb.Address) (*pb.Response, error) {
-	// fmt.Printf("Client %v received message from %v\n", s.Sessionid, in.GetIp())
 	status := func() pb.Status {
 		success := rand.Intn(5) > 2
 		if success {
@@ -51,10 +50,10 @@ func registerServer(port string, sessionID int) {
 	}
 }
 
-func registerClient(ports []string, session int) {
+func registerClient(addresses []string, session int) {
 	// Set up a connection to the server.
-	for _, port := range ports {
-		conn, err := grpc.Dial(fmt.Sprintf("localhost%s", port), grpc.WithInsecure())
+	for _, address := range addresses {
+		conn, err := grpc.Dial(fmt.Sprintf(address), grpc.WithInsecure())
 
 		if err != nil {
 			log.Fatalf("did not connect: %v", err)
@@ -67,11 +66,11 @@ func registerClient(ports []string, session int) {
 		// Contact the server and print out its response.
 
 		for times := 0; times < 3; times++ {
-			r, err := c.Ping(ctx, &pb.Address{Address: "localhost" + port})
+			r, err := c.Ping(ctx, &pb.Address{Address: address})
 			if err != nil {
-				log.Printf("Could not ping %v could not send mail: %v", port, err)
+				log.Printf("Could not ping %v could not send mail: %v", address, err)
 			} else {
-				log.Printf(fmt.Sprintf("Client localhost%s received message with status %s", port, r.GetStatus().String()))
+				log.Printf(fmt.Sprintf("Client localhost%s received message with status %s", address, r.GetStatus().String()))
 				break
 			}
 		}
@@ -79,13 +78,13 @@ func registerClient(ports []string, session int) {
 }
 
 func main() {
-	myPort := os.Args[1:][0]
-	peerPorts := os.Args[1:]
+	port := os.Args[1:][0]
+	peerAddresses := os.Args[1:]
 	session := rand.Intn(1000000)
-	go func() { registerServer(myPort, session) }()
+	go func() { registerServer(port, session) }()
 	time.Sleep(time.Second * 1)
 	for {
 		time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
-		registerClient(peerPorts, session)
+		registerClient(peerAddresses, session)
 	}
 }
