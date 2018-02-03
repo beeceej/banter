@@ -8,9 +8,9 @@ It is generated from these files:
 	banter.proto
 
 It has these top-level messages:
-	Address
-	Response
 	Peer
+	Response
+	Message
 */
 package pb
 
@@ -55,24 +55,62 @@ func (x Status) String() string {
 }
 func (Status) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-type Address struct {
-	Address string `protobuf:"bytes,1,opt,name=address" json:"address,omitempty"`
+type Msg int32
+
+const (
+	Msg_PING Msg = 0
+	Msg_PONG Msg = 1
+)
+
+var Msg_name = map[int32]string{
+	0: "PING",
+	1: "PONG",
+}
+var Msg_value = map[string]int32{
+	"PING": 0,
+	"PONG": 1,
 }
 
-func (m *Address) Reset()                    { *m = Address{} }
-func (m *Address) String() string            { return proto.CompactTextString(m) }
-func (*Address) ProtoMessage()               {}
-func (*Address) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (x Msg) String() string {
+	return proto.EnumName(Msg_name, int32(x))
+}
+func (Msg) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
-func (m *Address) GetAddress() string {
+type Peer struct {
+	Name    string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Address string `protobuf:"bytes,2,opt,name=address" json:"address,omitempty"`
+	Port    string `protobuf:"bytes,3,opt,name=port" json:"port,omitempty"`
+}
+
+func (m *Peer) Reset()                    { *m = Peer{} }
+func (m *Peer) String() string            { return proto.CompactTextString(m) }
+func (*Peer) ProtoMessage()               {}
+func (*Peer) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
+func (m *Peer) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *Peer) GetAddress() string {
 	if m != nil {
 		return m.Address
 	}
 	return ""
 }
 
+func (m *Peer) GetPort() string {
+	if m != nil {
+		return m.Port
+	}
+	return ""
+}
+
 type Response struct {
-	Status Status `protobuf:"varint,1,opt,name=status,enum=banter.Status" json:"status,omitempty"`
+	Status Status  `protobuf:"varint,1,opt,name=status,enum=banter.Status" json:"status,omitempty"`
+	Ttl    float32 `protobuf:"fixed32,2,opt,name=ttl" json:"ttl,omitempty"`
 }
 
 func (m *Response) Reset()                    { *m = Response{} }
@@ -87,43 +125,43 @@ func (m *Response) GetStatus() Status {
 	return Status_OK
 }
 
-type Peer struct {
-	PeerId    string `protobuf:"bytes,1,opt,name=peer_id,json=peerId" json:"peer_id,omitempty"`
-	Name      string `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
-	IpAddress string `protobuf:"bytes,3,opt,name=ip_address,json=ipAddress" json:"ip_address,omitempty"`
+func (m *Response) GetTtl() float32 {
+	if m != nil {
+		return m.Ttl
+	}
+	return 0
 }
 
-func (m *Peer) Reset()                    { *m = Peer{} }
-func (m *Peer) String() string            { return proto.CompactTextString(m) }
-func (*Peer) ProtoMessage()               {}
-func (*Peer) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
-
-func (m *Peer) GetPeerId() string {
-	if m != nil {
-		return m.PeerId
-	}
-	return ""
+type Message struct {
+	Msg    Msg   `protobuf:"varint,1,opt,name=msg,enum=banter.Msg" json:"msg,omitempty"`
+	Origin *Peer `protobuf:"bytes,2,opt,name=origin" json:"origin,omitempty"`
 }
 
-func (m *Peer) GetName() string {
+func (m *Message) Reset()                    { *m = Message{} }
+func (m *Message) String() string            { return proto.CompactTextString(m) }
+func (*Message) ProtoMessage()               {}
+func (*Message) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *Message) GetMsg() Msg {
 	if m != nil {
-		return m.Name
+		return m.Msg
 	}
-	return ""
+	return Msg_PING
 }
 
-func (m *Peer) GetIpAddress() string {
+func (m *Message) GetOrigin() *Peer {
 	if m != nil {
-		return m.IpAddress
+		return m.Origin
 	}
-	return ""
+	return nil
 }
 
 func init() {
-	proto.RegisterType((*Address)(nil), "banter.Address")
-	proto.RegisterType((*Response)(nil), "banter.Response")
 	proto.RegisterType((*Peer)(nil), "banter.Peer")
+	proto.RegisterType((*Response)(nil), "banter.Response")
+	proto.RegisterType((*Message)(nil), "banter.Message")
 	proto.RegisterEnum("banter.Status", Status_name, Status_value)
+	proto.RegisterEnum("banter.Msg", Msg_name, Msg_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -137,7 +175,7 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for Banter service
 
 type BanterClient interface {
-	Ping(ctx context.Context, in *Address, opts ...grpc.CallOption) (*Response, error)
+	Send(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Response, error)
 }
 
 type banterClient struct {
@@ -148,9 +186,9 @@ func NewBanterClient(cc *grpc.ClientConn) BanterClient {
 	return &banterClient{cc}
 }
 
-func (c *banterClient) Ping(ctx context.Context, in *Address, opts ...grpc.CallOption) (*Response, error) {
+func (c *banterClient) Send(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Response, error) {
 	out := new(Response)
-	err := grpc.Invoke(ctx, "/banter.banter/Ping", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/banter.banter/Send", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -160,27 +198,27 @@ func (c *banterClient) Ping(ctx context.Context, in *Address, opts ...grpc.CallO
 // Server API for Banter service
 
 type BanterServer interface {
-	Ping(context.Context, *Address) (*Response, error)
+	Send(context.Context, *Message) (*Response, error)
 }
 
 func RegisterBanterServer(s *grpc.Server, srv BanterServer) {
 	s.RegisterService(&_Banter_serviceDesc, srv)
 }
 
-func _Banter_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Address)
+func _Banter_Send_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Message)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BanterServer).Ping(ctx, in)
+		return srv.(BanterServer).Send(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/banter.banter/Ping",
+		FullMethod: "/banter.banter/Send",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BanterServer).Ping(ctx, req.(*Address))
+		return srv.(BanterServer).Send(ctx, req.(*Message))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -190,8 +228,8 @@ var _Banter_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*BanterServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Ping",
-			Handler:    _Banter_Ping_Handler,
+			MethodName: "Send",
+			Handler:    _Banter_Send_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -201,19 +239,22 @@ var _Banter_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("banter.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 214 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x34, 0x50, 0xbd, 0x4a, 0xc6, 0x30,
-	0x14, 0xb5, 0x35, 0xa6, 0xf6, 0x22, 0x9f, 0xe5, 0x2e, 0x16, 0x45, 0x90, 0x0a, 0xa2, 0x0e, 0xdf,
-	0xd0, 0x3e, 0x81, 0x82, 0x83, 0x38, 0xb4, 0xc4, 0xcd, 0xa5, 0xa4, 0xe4, 0x22, 0x19, 0x4c, 0x43,
-	0x12, 0xdf, 0x5f, 0xcc, 0xcf, 0x76, 0x7e, 0x92, 0x93, 0x73, 0x02, 0x17, 0x9b, 0x34, 0x81, 0xdc,
-	0xd1, 0xba, 0x3d, 0xec, 0xc8, 0x13, 0x1b, 0xee, 0xa1, 0x79, 0x51, 0xca, 0x91, 0xf7, 0xd8, 0x43,
-	0x23, 0x13, 0xec, 0xab, 0xbb, 0xea, 0xb1, 0x15, 0x85, 0x0e, 0x23, 0x9c, 0x0b, 0xf2, 0x76, 0x37,
-	0x9e, 0xf0, 0x01, 0xb8, 0x0f, 0x32, 0xfc, 0xa6, 0x43, 0x87, 0xf1, 0x70, 0xcc, 0xb9, 0x9f, 0x51,
-	0x15, 0xd9, 0x1d, 0x04, 0xb0, 0x85, 0xc8, 0xe1, 0x15, 0x34, 0x96, 0xc8, 0xad, 0x5a, 0xe5, 0x54,
-	0xfe, 0x4f, 0xdf, 0x15, 0x22, 0x30, 0x23, 0x7f, 0xa8, 0xaf, 0xa3, 0x1a, 0x31, 0xde, 0x02, 0x68,
-	0xbb, 0x96, 0x16, 0xa7, 0xd1, 0x69, 0xb5, 0xcd, 0x0d, 0x9f, 0x6f, 0x80, 0xa7, 0x57, 0x90, 0x43,
-	0x3d, 0x7f, 0x74, 0x27, 0xd8, 0xc2, 0xd9, 0x9b, 0x10, 0xb3, 0xe8, 0xaa, 0x71, 0x82, 0xbc, 0x09,
-	0x9f, 0x80, 0x2d, 0xda, 0x7c, 0xe3, 0x65, 0xa9, 0x96, 0xef, 0x5f, 0x77, 0x45, 0x28, 0x6b, 0x5e,
-	0xd9, 0x57, 0x6d, 0xb7, 0x8d, 0xc7, 0x3f, 0x99, 0xfe, 0x02, 0x00, 0x00, 0xff, 0xff, 0xd8, 0x14,
-	0x18, 0x32, 0x23, 0x01, 0x00, 0x00,
+	// 263 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x3c, 0x50, 0x4d, 0x4b, 0xc3, 0x40,
+	0x10, 0x6d, 0x3e, 0xdc, 0xb6, 0xd3, 0x52, 0x97, 0x39, 0x45, 0x45, 0x90, 0x20, 0xa2, 0x3d, 0xf4,
+	0x90, 0xfe, 0x03, 0x51, 0xaa, 0x48, 0x92, 0xb2, 0xbd, 0x79, 0x4b, 0xc8, 0x10, 0x0a, 0x36, 0x09,
+	0x3b, 0xeb, 0xff, 0x97, 0x6c, 0x76, 0xbd, 0xbd, 0x79, 0xf3, 0xe6, 0xcd, 0xcc, 0x83, 0x75, 0x5d,
+	0x75, 0x86, 0xf4, 0x6e, 0xd0, 0xbd, 0xe9, 0x51, 0x4c, 0x55, 0xfa, 0x01, 0xf1, 0x91, 0x48, 0x23,
+	0x42, 0xdc, 0x55, 0x17, 0x4a, 0x82, 0x87, 0xe0, 0x79, 0xa9, 0x2c, 0xc6, 0x04, 0xe6, 0x55, 0xd3,
+	0x68, 0x62, 0x4e, 0x42, 0x4b, 0xfb, 0x72, 0x54, 0x0f, 0xbd, 0x36, 0x49, 0x34, 0xa9, 0x47, 0x9c,
+	0xbe, 0xc1, 0x42, 0x11, 0x0f, 0x7d, 0xc7, 0x84, 0x4f, 0x20, 0xd8, 0x54, 0xe6, 0x97, 0xad, 0xdf,
+	0x26, 0xdb, 0xec, 0xdc, 0xf2, 0x93, 0x65, 0x95, 0xeb, 0xa2, 0x84, 0xc8, 0x98, 0x1f, 0xeb, 0x1e,
+	0xaa, 0x11, 0xa6, 0x05, 0xcc, 0x73, 0x62, 0xae, 0x5a, 0xc2, 0x7b, 0x88, 0x2e, 0xdc, 0x3a, 0x87,
+	0x95, 0x77, 0xc8, 0xb9, 0x55, 0x23, 0x8f, 0x8f, 0x20, 0x7a, 0x7d, 0x6e, 0xcf, 0x9d, 0x1d, 0x5f,
+	0x65, 0x6b, 0xaf, 0x18, 0xff, 0x51, 0xae, 0xb7, 0xbd, 0x03, 0x31, 0xed, 0x44, 0x01, 0x61, 0xf9,
+	0x25, 0x67, 0xb8, 0x84, 0xab, 0x77, 0xa5, 0x4a, 0x25, 0x83, 0xed, 0x0d, 0x44, 0x39, 0xb7, 0xb8,
+	0x80, 0xf8, 0xf8, 0x59, 0x1c, 0xe4, 0xcc, 0xa2, 0xb2, 0x38, 0xc8, 0x20, 0xdb, 0x83, 0x4b, 0x08,
+	0x5f, 0x20, 0x3e, 0x51, 0xd7, 0xe0, 0xf5, 0xff, 0x05, 0xd3, 0x7d, 0xb7, 0xd2, 0x13, 0xfe, 0xed,
+	0xd7, 0xf8, 0x3b, 0x1c, 0xea, 0x5a, 0xd8, 0x84, 0xf7, 0x7f, 0x01, 0x00, 0x00, 0xff, 0xff, 0x13,
+	0x98, 0xc0, 0xc1, 0x71, 0x01, 0x00, 0x00,
 }
