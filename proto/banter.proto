@@ -6,25 +6,31 @@ option go_package = "pb";
 
 
 service banter {
-    rpc Ping (Address) returns (Response);
+    rpc Send(Message) returns (Response);
 }
 
-message Address {
-    string address = 1;
+message Peer {
+    string name = 1;
+    string address = 2;
+    string port = 3;
 }
 
 message Response {
     Status status = 1;
+    float ttl = 2;
 }
-
-message Peer {
-    string peer_id = 1;
-    string name = 2;
-    string ip_address = 3;
-}
-
 
 enum Status {
      OK = 0;
      ERROR = 1;
+}
+
+message Message {
+    Msg msg = 1;
+    Peer origin = 2;
+}
+
+enum Msg {
+    PING = 0;
+    PONG = 1;
 }

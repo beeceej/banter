@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/beeceej/banter/pb"
@@ -20,29 +22,41 @@ func init() {
 
 type server struct {
 	SessionID int
+	Address   string
+	Port      string
 }
 
-func (s *server) Ping(ctx context.Context, in *pb.Address) (*pb.Response, error) {
-	status := func() pb.Status {
-		success := rand.Intn(5) > 2
-		if success {
-			return pb.Status_OK
-		}
-		return pb.Status_ERROR
-	}()
+func (s *server) Ping(ctx context.Context, in *pb.Client) (*pb.Response, error) {
+	fmt.Println(ctx)
+	conn, err := grpc.Dial(in.Address+in.Port, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+	c := pb.NewBanterClient(conn)
 
-	return &pb.Response{Status: status}, nil
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*2))
+	defer cancel()
+
+	fmt.Printf("respondign to ping request from port %s", in.Port)
+	r, err := c.Ping(ctx, &pb.Client{Address: in.Address, Port: in.Port})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.Response{Status: r.GetStatus()}, nil
 }
 
 func registerServer(port string, sessionID int) {
-	// should be env variable
 
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterBanterServer(s, &server{SessionID: sessionID})
+	fmt.Println(port)
+	pb.RegisterBanterServer(s, &server{Address: "127.0.0.1", Port: port, SessionID: sessionID})
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
@@ -51,26 +65,19 @@ func registerServer(port string, sessionID int) {
 }
 
 func registerClient(addresses []string, session int) {
+	var (
+		conn *grpc.ClientConn
+		err  error
+	)
 	// Set up a connection to the server.
 	for _, address := range addresses {
-		conn, err := grpc.Dial(fmt.Sprintf(address), grpc.WithInsecure())
-
-		if err != nil {
-			log.Fatalf("did not connect: %v", err)
-		}
-		defer conn.Close()
-		c := pb.NewBanterClient(conn)
-
-		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*2))
-		defer cancel()
-		// Contact the server and print out its response.
-
-		for times := 0; times < 3; times++ {
-			r, err := c.Ping(ctx, &pb.Address{Address: address})
+		
 			if err != nil {
-				log.Printf("Could not ping %v could not send mail: %v", address, err)
+				log.Printf("Could not ping %v | %s", address, err.Error())
+				fmt.Println(&pb.Client{Address: strings.Split(address, ":")[0], Port: ":" + strings.Split(address, ":")[1]})
+
 			} else {
-				log.Printf(fmt.Sprintf("Client localhost%s received message with status %s", address, r.GetStatus().String()))
+				log.Printf(fmt.Sprintf("%s received message with status %s", address, r.GetStatus().String()))
 				break
 			}
 		}
@@ -79,12 +86,12 @@ func registerClient(addresses []string, session int) {
 
 func main() {
 	port := os.Args[1:][0]
-	peerAddresses := os.Args[1:]
+	peerAddresses := os.Args[2:]
 	session := rand.Intn(1000000)
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
 	go func() { registerServer(port, session) }()
-	time.Sleep(time.Second * 1)
-	for {
-		time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
-		registerClient(peerAddresses, session)
-	}
+	registerClient(peerAddresses, session)
+	wg.Wait()
+
 }
