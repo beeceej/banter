@@ -17,7 +17,6 @@ message Peer {
 
 message Response {
     Status status = 1;
-    float ttl = 2;
 }
 
 enum Status {
