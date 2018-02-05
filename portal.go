@@ -19,7 +19,7 @@ type portal struct {
 
 var webportal *portal
 
-func (s *Server) StartWebPortal(wg *sync.WaitGroup) chan bool {
+func (s *Server) StartWebPortal(wg *sync.WaitGroup) {
 	wg.Add(1)
 	errCh := make(chan error)
 	prtl := http.Server{Addr: ":3000"}
@@ -32,7 +32,6 @@ func (s *Server) StartWebPortal(wg *sync.WaitGroup) chan bool {
 				webportal.Shutdown <- true
 				wg.Done()
 			case <-webportal.Shutdown:
-				fmt.Println("Shutdown")
 				wg.Done()
 			}
 		}
@@ -46,8 +45,6 @@ func (s *Server) StartWebPortal(wg *sync.WaitGroup) chan bool {
 			errCh <- err
 		}
 	}()
-
-	return webportal.Shutdown
 }
 
 func (s *Server) ServerInfo(rw http.ResponseWriter, r *http.Request) {

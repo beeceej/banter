@@ -56,7 +56,6 @@ func main() {
 	}
 	time.Sleep(time.Millisecond * 50)
 	_ = s1.StartWebPortal(wg)
-
 	s1.Broadcast(banter.MsgPing(s1.Me), time.Second*2)
 
 	for _, v := range servers {

@@ -30,15 +30,7 @@ func (s *Server) Send(ctx context.Context, msg *pb.Message) (*pb.Response, error
 	case pb.Msg_PING:
 		return s.IssuePong(msg.GetOrigin(), time.Second*1)
 	case pb.Msg_PONG:
-		success := func() bool {
-			r := rand.Intn(10)
-			return r >= 5
-		}()
-		if success {
-			return &pb.Response{Status: pb.Status_OK}, nil
-		}
-		return &pb.Response{Status: pb.Status_ERROR}, nil
-
+		return &pb.Response{Status: pb.Status_OK}, nil
 	}
 	return nil, errors.New("unhandled msg")
 }
@@ -81,14 +73,12 @@ func (s *Server) Register(sessionID int, wg *sync.WaitGroup) {
 func (s *Server) IssuePing(peer *pb.Peer, deadline time.Duration) (r *pb.Response, err error) {
 	var conn *grpc.ClientConn
 	if conn, err = s.Dial(peer); err != nil {
-		fmt.Println(err.Error())
+		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
-
 	c := pb.NewBanterClient(conn)
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(deadline))
 	defer cancel()
-	// Contact the server and print out its response.
 	if r, err = c.Send(ctx, MsgPing(s.Me)); err != nil {
 		return nil, err
 	}
@@ -102,12 +92,10 @@ func (s *Server) IssuePong(peer *pb.Peer, deadline time.Duration) (r *pb.Respons
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
-
 	c := pb.NewBanterClient(conn)
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(deadline))
 	defer cancel()
-	// Contact the server and print out its response.
-	if r, err = c.Send(ctx, MsgPong(s.Me)); err != nil {
+	if r, err = c.Send(ctx, MsgPing(s.Me)); err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -118,10 +106,9 @@ func (s *Server) Broadcast(msg *pb.Message, deadline time.Duration) map[string]p
 	results := make(map[string]pb.Status)
 	for _, v := range s.Peers {
 		go func(p *pb.Peer) {
-			fmt.Println(p)
 			r, err := s.Issue(p, msg, deadline)
 			if err != nil {
-				fmt.Println(err.Error())
+				ch <- &pb.Response{Status: pb.Status_ERROR}
 			}
 			ch <- r
 		}(v)
