@@ -50,12 +50,13 @@ var servers = []*banter.Server{
 
 func main() {
 	wg := new(sync.WaitGroup)
-	wg.Add(len(servers) + 1)
 	go func() { s1.Register(rand.Intn(1000), wg) }()
 	for _, v := range servers {
 		go func(s *banter.Server) { s.Register(rand.Intn(1000), wg) }(v)
 	}
-	// time.Sleep(time.Millisecond * 25)
+	time.Sleep(time.Millisecond * 50)
+	_ = s1.StartWebPortal(wg)
+
 	s1.Broadcast(banter.MsgPing(s1.Me), time.Second*2)
 
 	for _, v := range servers {
@@ -63,4 +64,5 @@ func main() {
 	}
 	s1.Quit <- true
 	wg.Wait()
+	//q <- true
 }

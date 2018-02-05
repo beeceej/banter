@@ -22,7 +22,7 @@ func init() {
 type Server struct {
 	Me    *pb.Peer
 	Peers []*pb.Peer
-	Quit  chan bool
+	Quit  chan bool `json:"-"`
 }
 
 func (s *Server) Send(ctx context.Context, msg *pb.Message) (*pb.Response, error) {
@@ -52,7 +52,7 @@ func (s *Server) Dial(peer *pb.Peer) (conn *grpc.ClientConn, err error) {
 }
 
 func (s *Server) Register(sessionID int, wg *sync.WaitGroup) {
-
+	wg.Add(1)
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.Me.Port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
