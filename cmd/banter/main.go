@@ -64,5 +64,4 @@ func main() {
 	}
 	s1.Quit <- true
 	wg.Wait()
-	//q <- true
 }
