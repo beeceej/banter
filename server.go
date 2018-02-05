@@ -113,10 +113,12 @@ func (s *Server) IssuePong(peer *pb.Peer, deadline time.Duration) (r *pb.Respons
 	return r, nil
 }
 
-func (s *Server) Broadcast(msg *pb.Message, deadline time.Duration) {
+func (s *Server) Broadcast(msg *pb.Message, deadline time.Duration) map[string]pb.Status {
 	ch := make(chan *pb.Response)
+	results := make(map[string]pb.Status)
 	for _, v := range s.Peers {
 		go func(p *pb.Peer) {
+			fmt.Println(p)
 			r, err := s.Issue(p, msg, deadline)
 			if err != nil {
 				fmt.Println(err.Error())
@@ -124,13 +126,13 @@ func (s *Server) Broadcast(msg *pb.Message, deadline time.Duration) {
 			ch <- r
 		}(v)
 	}
-	for _ = range s.Peers {
+	for _, peer := range s.Peers {
 		select {
 		case r := <-ch:
-			fmt.Println(r.GetStatus())
-
+			results[fmt.Sprintf("%s:%s", peer.GetAddress(), peer.GetPort())] = r.GetStatus()
 		}
 	}
+	return results
 }
 
 func (s *Server) Issue(peer *pb.Peer, msg *pb.Message, deadline time.Duration) (r *pb.Response, err error) {
