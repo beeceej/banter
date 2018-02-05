@@ -3,6 +3,7 @@ package banter
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 )
@@ -28,10 +29,10 @@ func (s *Server) StartWebPortal(wg *sync.WaitGroup) {
 		for {
 			select {
 			case err := <-errCh:
-				fmt.Println(err.Error())
+				log.Println(err.Error())
 				webportal.Shutdown <- true
-				wg.Done()
 			case <-webportal.Shutdown:
+				s.Quit <- true
 				wg.Done()
 			}
 		}
@@ -39,7 +40,6 @@ func (s *Server) StartWebPortal(wg *sync.WaitGroup) {
 	go func() {
 		http.HandleFunc("/server", s.ServerInfo)
 		http.HandleFunc("/shutdown", s.ShutdownPortal)
-
 		if err := prtl.ListenAndServe(); err != nil {
 			fmt.Println(err.Error())
 			errCh <- err

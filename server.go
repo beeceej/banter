@@ -58,6 +58,7 @@ func (s *Server) Register(sessionID int, wg *sync.WaitGroup) {
 			select {
 			case b := <-s.Quit:
 				if b {
+					fmt.Println("done")
 					wg.Done()
 					break
 				}
